@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -x
+set -e
+
+# FIXME: All of the following makes lots of assumptions, should be fixed later
+LODEVICE=$(losetup -f)
+losetup $LODEVICE *.img
+partprobe $LODEVICE
+mount "${LODEVICE}p1" /mnt
+cd /mnt/usr/share/c2_uboot/
+./sd_fusing.sh $LODEVICE
+cd
+umount /mnt
+losetup -d $LODEVICE

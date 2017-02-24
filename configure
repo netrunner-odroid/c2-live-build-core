@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# (C) 2012-2015 Fathi Boudra <fathi.boudra@linaro.org>
+# (C) 2015 Rohan Garg <rohan@garg.io>
+
+# Create configuration for live-build.
+
+# You need live-build package installed.
+
+set -e
+set -x
+
+echo "I: create configuration"
+
+SNAP_URL='http://snapshot.debian.org/archive/debian/20161211/'
+
+export LB_HDD_PARTITION_START="3072s"
+export LB_BOOTLOADERS="none"
+export LB_HDD_LABEL="ODROID-C2"
+export LB_MKFS_OPTIONS="-O ^64bit,^metadata_csum,uninit_bg"
+
+# Set Version
+VER=$(date +%Y%m%d.%H%M)
+# Set name for image file
+export LIVE_IMAGE_NAME="c2-netrunner-core-$VER"
+
+echo "I: Format is $FMT"
+
+lb config \
+ --architectures arm64 \
+ --archive-areas 'main contrib non-free' \
+ --distribution testing \
+ --binary-images hdd \
+ --mode debian \
+ --apt-source-archives false \
+ --source false \
+ --apt-options "--yes -o Debug::pkgProblemResolver=true -o Debug::pkgDepCache::AutoInstall=true -o Debug::pkgDepCache::Marker=true -o Acquire::Check-Valid-Until=false" \
+ --linux-flavours none \
+ --linux-packages none \
+ --initramfs none \
+ --chroot-filesystem none \
+ --binary-filesystem ext4 \
+ --hdd-size 6000 \
+ --firmware-chroot false \
+ --security false \
+ -m $SNAP_URL \
+ --parent-mirror-binary $SNAP_URL \
+ --mirror-bootstrap $SNAP_URL \
+ --mirror-chroot $SNAP_URL \
+ --mirror-binary $SNAP_URL \
+ --mirror-debian-installer $SNAP_URL \
+ $@
+
+echo "I: copy customization"
+test -d customization && cp -rf customization/* config/
+
+sed -i "s,@@TIMESTAMP@@,$DAY,g" config/includes.chroot/boot/boot.ini
+sed -i "s,@@_VER_@@,${VER},g" config/hooks/live/01-overwrite-release-files.hook.chroot
+
+echo "I: done"
